@@ -67,6 +67,67 @@ def init_otp_table():
     """)
     conn.commit()
 
+def init_email_verification_table():
+    cursor = conn.cursor()
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS email_verification (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            email TEXT NOT NULL,
+            otp TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            expires_at TIMESTAMP,
+            verified BOOLEAN DEFAULT 0
+        )
+    """)
+    conn.commit()
+
+def send_welcome_email(email, username):
+    smtp_server = os.getenv('SMTP_SERVER', 'smtp.gmail.com')
+    smtp_port = int(os.getenv('SMTP_PORT', '587'))
+    smtp_username = os.getenv('SMTP_USERNAME')
+    smtp_password = os.getenv('SMTP_PASSWORD')
+
+    if not all([smtp_username, smtp_password]):
+        print("Error: SMTP credentials not properly configured")
+        return False
+
+    msg = MIMEMultipart()
+    msg['From'] = smtp_username
+    msg['To'] = email
+    msg['Subject'] = 'Welcome to WhatsApp Chat Analyzer!'
+
+    body = f"""
+    Dear {username},
+
+    Welcome to WhatsApp Chat Analyzer! Your account has been successfully created.
+
+    You can now log in to:
+    - Analyze your WhatsApp chats
+    - View detailed statistics and visualizations
+    - Track conversation patterns
+    - And much more!
+
+    Thank you for joining us.
+
+    Best regards,
+    WhatsApp Chat Analyzer Team
+    """
+    
+    msg.attach(MIMEText(body, 'plain'))
+
+    try:
+        server = smtplib.SMTP(smtp_server, smtp_port, timeout=30)
+        server.ehlo()
+        server.starttls()
+        server.ehlo()
+        server.login(smtp_username, smtp_password)
+        server.send_message(msg)
+        server.quit()
+        return True
+    except Exception as e:
+        print(f"Error sending welcome email: {str(e)}")
+        return False
+
 def send_otp_email(email, otp):
     # Add more detailed error handling and logging
     smtp_server = os.getenv('SMTP_SERVER', 'smtp.gmail.com')
@@ -125,6 +186,66 @@ def send_otp_email(email, otp):
     except Exception as e:
         print(f"An unexpected error occurred: {str(e)}")
         return False
+
+def send_verification_email(email, otp):
+    smtp_server = os.getenv('SMTP_SERVER', 'smtp.gmail.com')
+    smtp_port = int(os.getenv('SMTP_PORT', '587'))
+    smtp_username = os.getenv('SMTP_USERNAME')
+    smtp_password = os.getenv('SMTP_PASSWORD')
+
+    if not all([smtp_username, smtp_password]):
+        print("Error: SMTP credentials not properly configured")
+        return False
+
+    msg = MIMEMultipart()
+    msg['From'] = smtp_username
+    msg['To'] = email
+    msg['Subject'] = 'Email Verification OTP'
+
+    body = f"""
+    Thank you for signing up! Your verification OTP is: {otp}
+    
+    This OTP will expire in 10 minutes.
+    If you didn't create an account, please ignore this email.
+    """
+    
+    msg.attach(MIMEText(body, 'plain'))
+
+    try:
+        server = smtplib.SMTP(smtp_server, smtp_port, timeout=30)
+        server.ehlo()
+        server.starttls()
+        server.ehlo()
+        server.login(smtp_username, smtp_password)
+        server.send_message(msg)
+        server.quit()
+        return True
+    except Exception as e:
+        print(f"Error sending verification email: {str(e)}")
+        return False
+
+def verify_email_otp(conn, email, otp):
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT id FROM email_verification 
+        WHERE email = ? AND otp = ? AND expires_at > CURRENT_TIMESTAMP 
+        AND verified = 0 ORDER BY created_at DESC LIMIT 1
+    """, (email, otp))
+    result = cursor.fetchone()
+    if result:
+        cursor.execute("UPDATE email_verification SET verified = 1 WHERE id = ?", (result[0],))
+        conn.commit()
+        return True
+    return False
+
+def store_verification_otp(conn, email, otp):
+    cursor = conn.cursor()
+    expires_at = datetime.now() + timedelta(minutes=10)
+    cursor.execute(
+        "INSERT INTO email_verification (email, otp, expires_at) VALUES (?, ?, ?)",
+        (email, otp, expires_at)
+    )
+    conn.commit()
 
 def generate_otp():
     return ''.join(random.choices(string.digits, k=6))
@@ -228,6 +349,7 @@ def forgot_password_page():
 conn = init_db()
 init_analysis_table(conn)
 init_otp_table()
+init_email_verification_table()
 
 
 # User authentication functions
@@ -363,37 +485,128 @@ def login_page():
         st.session_state["page"] = "Forgot Password"
         st.experimental_rerun()
 
+# def signup_page():
+#     if "user_id" in st.session_state:
+#         st.warning("You have logged in already!")
+#         return
+    
+#     st.title("Sign Up")
+#     with st.form("signup_form"):
+#         username = st.text_input("Username")
+#         email = st.text_input("Email")
+#         password = st.text_input("Password", type="password")
+#         profile_photo = st.file_uploader("Profile Photo", type=['jpg', 'jpeg', 'png'])
+#         submitted = st.form_submit_button("Sign Up")
+        
+#         if submitted:
+#             if len(username) < 3:
+#                 st.error("Username must be at least 3 characters long")
+#                 return
+#             if len(password) < 6:
+#                 st.error("Password must be at least 6 characters long")
+#                 return
+#             if not email or '@' not in email:
+#                 st.error("Please enter a valid email address")
+#                 return
+                
+#             user_id = signup(username, email, password, profile_photo)
+#             if user_id:
+#                 st.success("Sign up successful! Please login.")
+#                 st.session_state["page"] = "Login"
+#                 st.experimental_rerun()
+#             else:
+#                 st.error("Username or email already exists")
+
 def signup_page():
     if "user_id" in st.session_state:
-        st.warning("You have logged in already!")
+        st.warning("You are already logged in!")
         return
     
     st.title("Sign Up")
-    with st.form("signup_form"):
-        username = st.text_input("Username")
-        email = st.text_input("Email")
-        password = st.text_input("Password", type="password")
-        profile_photo = st.file_uploader("Profile Photo", type=['jpg', 'jpeg', 'png'])
-        submitted = st.form_submit_button("Sign Up")
-        
-        if submitted:
-            if len(username) < 3:
-                st.error("Username must be at least 3 characters long")
-                return
-            if len(password) < 6:
-                st.error("Password must be at least 6 characters long")
-                return
-            if not email or '@' not in email:
-                st.error("Please enter a valid email address")
-                return
+    
+    if "signup_stage" not in st.session_state:
+        st.session_state.signup_stage = "details"
+    
+    if st.session_state.signup_stage == "details":
+        with st.form("signup_details_form"):
+            username = st.text_input("Username")
+            email = st.text_input("Email")
+            password = st.text_input("Password", type="password")
+            profile_photo = st.file_uploader("Profile Photo", type=['jpg', 'jpeg', 'png'])
+            submitted = st.form_submit_button("Continue")
+            
+            if submitted:
+                if len(username) < 3:
+                    st.error("Username must be at least 3 characters long")
+                    return
+                if len(password) < 6:
+                    st.error("Password must be at least 6 characters long")
+                    return
+                if not email or '@' not in email:
+                    st.error("Please enter a valid email address")
+                    return
                 
-            user_id = signup(username, email, password, profile_photo)
-            if user_id:
-                st.success("Sign up successful! Please login.")
-                st.session_state["page"] = "Login"
-                st.experimental_rerun()
-            else:
-                st.error("Username or email already exists")
+                # Check if username or email already exists
+                cursor = conn.cursor()
+                cursor.execute("SELECT id FROM users WHERE username = ? OR email = ?", (username, email))
+                if cursor.fetchone():
+                    st.error("Username or email already exists")
+                    return
+                
+                # Store signup details in session state
+                st.session_state.signup_username = username
+                st.session_state.signup_email = email
+                st.session_state.signup_password = password
+                st.session_state.signup_profile_photo = profile_photo
+                
+                # Generate and send OTP
+                otp = generate_otp()
+                if send_verification_email(email, otp):
+                    store_verification_otp(conn, email, otp)  # Pass conn here
+                    st.session_state.signup_stage = "verification"
+                    st.success("Verification code sent to your email!")
+                    st.experimental_rerun()
+                else:
+                    st.error("Failed to send verification email. Please try again.")
+    
+    elif st.session_state.signup_stage == "verification":
+        with st.form("signup_verification_form"):
+            st.write(f"Please enter the verification code sent to {st.session_state.signup_email}")
+            otp = st.text_input("Verification Code")
+            submitted = st.form_submit_button("Verify and Sign Up")
+            
+            if submitted:
+                if verify_email_otp(conn, st.session_state.signup_email, otp):  # Pass conn here
+                    # Create user account
+                    user_id = signup(
+                        st.session_state.signup_username,
+                        st.session_state.signup_email,
+                        st.session_state.signup_password,
+                        st.session_state.signup_profile_photo
+                    )
+                    
+                    if user_id:
+                        # Clear signup session state
+                        if send_welcome_email(st.session_state.signup_email, st.session_state.signup_username):
+                            st.success("Account created successfully! Welcome email has been sent.")
+                        else:
+                            st.warning("Account created successfully, but failed to send welcome email.")
+                        for key in ['signup_stage', 'signup_username', 'signup_email', 
+                                  'signup_password', 'signup_profile_photo']:
+                            if key in st.session_state:
+                                del st.session_state[key]
+                        
+                        st.success("Sign up successful! Please login.")
+                        st.session_state["page"] = "Login"
+                        st.experimental_rerun()
+                    else:
+                        st.error("Failed to create account. Please try again.")
+                else:
+                    st.error("Invalid or expired verification code.")
+        
+        if st.button("Back"):
+            st.session_state.signup_stage = "details"
+            st.experimental_rerun()
 
 def profile_settings_page():
     if "user_id" not in st.session_state:
