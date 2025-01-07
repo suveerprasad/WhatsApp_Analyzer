@@ -485,37 +485,6 @@ def login_page():
         st.session_state["page"] = "Forgot Password"
         st.experimental_rerun()
 
-# def signup_page():
-#     if "user_id" in st.session_state:
-#         st.warning("You have logged in already!")
-#         return
-    
-#     st.title("Sign Up")
-#     with st.form("signup_form"):
-#         username = st.text_input("Username")
-#         email = st.text_input("Email")
-#         password = st.text_input("Password", type="password")
-#         profile_photo = st.file_uploader("Profile Photo", type=['jpg', 'jpeg', 'png'])
-#         submitted = st.form_submit_button("Sign Up")
-        
-#         if submitted:
-#             if len(username) < 3:
-#                 st.error("Username must be at least 3 characters long")
-#                 return
-#             if len(password) < 6:
-#                 st.error("Password must be at least 6 characters long")
-#                 return
-#             if not email or '@' not in email:
-#                 st.error("Please enter a valid email address")
-#                 return
-                
-#             user_id = signup(username, email, password, profile_photo)
-#             if user_id:
-#                 st.success("Sign up successful! Please login.")
-#                 st.session_state["page"] = "Login"
-#                 st.experimental_rerun()
-#             else:
-#                 st.error("Username or email already exists")
 
 def signup_page():
     if "user_id" in st.session_state:
