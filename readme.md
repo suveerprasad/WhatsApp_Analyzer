@@ -85,7 +85,8 @@ WhatsApp Chat Analyzer is a web-based application designed to analyze exported W
 ## Project Output
 
 ### Login Page:
-![Login Page Example](link_to_login_image)
+![Screenshot 2025-01-12 125109](https://github.com/user-attachments/assets/36ecd6e3-e46a-4105-bec5-7858d1db8beb)
+
 
 ### Dashboard:
 ![Dashboard Example](link_to_dashboard_image)
