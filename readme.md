@@ -84,27 +84,21 @@ WhatsApp Chat Analyzer is a web-based application designed to analyze exported W
 
 ## Project Output
 
-### Login Page:
+### Main Page:
 ![Screenshot 2025-01-12 125109](https://github.com/user-attachments/assets/36ecd6e3-e46a-4105-bec5-7858d1db8beb)
 
-
-### Dashboard:
-![Dashboard Example](link_to_dashboard_image)
-
-### Chat Analysis:
-![Chat Analysis Example](link_to_analysis_image)
-
-### Profile Settings:
-![Profile Settings Example](link_to_profile_settings_image)
+### User Sign-Up with email based authentication:
+![WhatsApp Image 2025-01-12 at 12 59 37_c0585588](https://github.com/user-attachments/assets/8ebfc5b9-12f5-4533-a2a9-b23482752bff)
+![WhatsApp Image 2025-01-12 at 12 59 38_37bf44eb](https://github.com/user-attachments/assets/4def10ee-49ed-444b-8321-7380c1515eb5)
 
 ---
 
 ## Tech Stack
 - **Frontend**: Streamlit
 - **Backend**: Python
-- **Database**: SQLite
-- **Visualization**: Plotly, Matplotlib
-- **Hosting Images**: Cloudinary
+- **Database**: SQLite3
+- **Visualization**: Plotly, Matplotlib , Numpy & Pandas for data visualisation
+- **Hosting Images**: CloudinaryAPI
 - **Authentication**: Email-based OTP and password hashing (bcrypt)
 
 ---
